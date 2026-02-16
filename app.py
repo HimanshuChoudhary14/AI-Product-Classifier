@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request
+ from flask import Flask, render_template, request
 import numpy as np
 import joblib
 
@@ -9,6 +9,8 @@ app = Flask(__name__)
 model = joblib.load("svm_model.pkl")
 scaler = joblib.load("scaler.pkl")
 label_encoder = joblib.load("label_encoder.pkl")
+selector = joblib.load("rfecv_selector.pkl")
+
 
 
 # HOME ROUTE
@@ -42,16 +44,17 @@ def predict():
         profit = revenue - (quantity * purchase_price)
 
         features = np.array([[quantity, unit_price, purchase_price, revenue, profit]])
-        features_scaled = scaler.transform(features)
 
-        pred = model.predict(features_scaled)[0]
+        features_scaled = scaler.transform(features)
+        features_selected = selector.transform(features_scaled)
+
+        pred = model.predict(features_selected)[0]
         category = label_encoder.inverse_transform([pred])[0]
 
-        raw_confidence = np.max(model.predict_proba(features_scaled)) * 100
-
+        raw_confidence = np.max(model.predict_proba(features_selected)) * 100
         confidence = 60 + (raw_confidence * 0.25)
-
         confidence = round(min(confidence, 85), 2)
+
 
 
         return render_template(
